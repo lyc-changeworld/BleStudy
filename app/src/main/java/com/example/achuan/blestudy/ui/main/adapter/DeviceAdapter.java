@@ -1,6 +1,5 @@
 package com.example.achuan.blestudy.ui.main.adapter;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -9,7 +8,9 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.example.achuan.blestudy.R;
+import com.example.achuan.blestudy.mode.bean.MTBeacon;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import butterknife.BindView;
@@ -26,7 +27,7 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
 
     private LayoutInflater mInflater;//创建布局装载对象来获取相关控件（类似于findViewById()）
     private Context mContext;//显示框面
-    protected List<BluetoothDevice> mBluetoothDevices;
+    protected List<MTBeacon> mMTBeaconList;
 
 
     //定义两个接口引用变量
@@ -52,9 +53,9 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
     }
 
     /*构造方法*/
-    public DeviceAdapter(Context mContext, List<BluetoothDevice> mBluetoothDevices) {
+    public DeviceAdapter(Context mContext, List<MTBeacon> mMTBeaconList) {
         this.mContext = mContext;
-        this.mBluetoothDevices = mBluetoothDevices;
+        this.mMTBeaconList = mMTBeaconList;
         //通过获取context来初始化mInflater对象
         mInflater = LayoutInflater.from(mContext);
     }
@@ -62,7 +63,7 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
 
     //适配器中数据集中的个数
     public int getItemCount() {
-        return mBluetoothDevices.size();
+        return mMTBeaconList.size();
     }
 
     /****
@@ -84,17 +85,22 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
     //绑定ViewHolder
     public void onBindViewHolder(final ViewHolder holder, final int postion) {
         //再通过viewHolder中缓冲的控件添加相关数据
-        BluetoothDevice device=mBluetoothDevices.get(postion);
+        MTBeacon mtBeacon = mMTBeaconList.get(postion);
 
 
-
-        final String deviceName = device.getName();
+        final String deviceName = mtBeacon.GetDevice().getName();
         if (deviceName != null && deviceName.length() > 0)
-            holder.mTvName.setText(device.getName());
+            holder.mTvName.setText(mtBeacon.GetDevice().getName());
         else
             holder.mTvName.setText(R.string.unknown_device);
 
-        holder.mTvAddress.setText("Mac: "+device.getAddress());
+        holder.mTvAddress.setText("Mac: " + mtBeacon.GetDevice().getAddress());
+
+        double distance=mtBeacon.getDistance();
+        BigDecimal b   =   new   BigDecimal(distance);
+        double   f1   =   b.setScale(2,   BigDecimal.ROUND_HALF_UP).doubleValue();
+
+        holder.mTvRssi.setText("Rssi: "+mtBeacon.GetAveragerssi()+" "+f1);
 
         /***为item设置点击监听事件***/
         holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -126,6 +132,9 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
         TextView mTvName;
         @BindView(R.id.tv_address)
         TextView mTvAddress;
+        @BindView(R.id.tv_rssi)
+        TextView mTvRssi;
+
         ViewHolder(View view) {
             super(view);
             ButterKnife.bind(this, view);

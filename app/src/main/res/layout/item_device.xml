@@ -6,17 +6,33 @@
               android:layout_height="wrap_content"
               android:background="@drawable/bg_item">
 
-    <!--设备名称-->
-    <TextView android:id="@+id/tv_name"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_marginLeft="5dp"
-              android:textSize="24dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+        <!--设备名称-->
+        <TextView
+            android:id="@+id/tv_name"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:textColor="#0000FF"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="25sp"/>
+        <!--信号强度-->
+        <TextView
+            android:id="@+id/tv_rssi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#0000FF"/>
+    </LinearLayout>
 
     <!--设备的Mac地址-->
-    <TextView android:id="@+id/tv_address"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_margin="5dp"
-              android:textSize="18dp"/>
+    <TextView
+        android:id="@+id/tv_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:textSize="18dp"/>
 </LinearLayout>

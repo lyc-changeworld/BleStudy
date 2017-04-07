@@ -20,6 +20,7 @@ import android.widget.Toast;
 
 import com.example.achuan.blestudy.R;
 import com.example.achuan.blestudy.base.SimpleActivity;
+import com.example.achuan.blestudy.mode.bean.MTBeacon;
 import com.example.achuan.blestudy.ui.main.adapter.DeviceAdapter;
 import com.example.achuan.blestudy.widget.RyItemDivider;
 
@@ -42,14 +43,18 @@ public class DeviceScanActivity extends SimpleActivity {
     private boolean mScanning;
     private Handler mHandler;
 
-    // Stops scanning after 10 seconds.
-    private static final long SCAN_PERIOD = 10000;
+    // Stops scanning after 5 seconds.
+    private static final long SCAN_PERIOD = 5000;
 
 
     Context mContext;
     List<BluetoothDevice> mDevices;//用来存储扫描到的设备集合
     DeviceAdapter mDeviceAdapter;
     LinearLayoutManager mLinearlayoutManager;//列表布局管理者
+
+    //预处理和最后使用的设备数据集合
+    private List<MTBeacon> mScanDevices_before;
+    private List<MTBeacon> mScanDevices_last;
 
 
     @Override
@@ -86,11 +91,13 @@ public class DeviceScanActivity extends SimpleActivity {
             return;
         }
 
-        /**如果蓝牙可以用*/
+        /**如果蓝牙可以用,进行初始化操作*/
         mHandler = new Handler();
+        mScanDevices_before=new ArrayList<>();
+        mScanDevices_last=new ArrayList<>();
         //创建集合实例对象
         mDevices = new ArrayList<>();
-        mDeviceAdapter = new DeviceAdapter(mContext, mDevices);
+        mDeviceAdapter = new DeviceAdapter(mContext, mScanDevices_before);
         mLinearlayoutManager = new LinearLayoutManager(mContext);
         //设置方向(默认是垂直,下面的是水平设置)
         //linearlayoutManager.setOrientation(LinearLayoutManager.HORIZONTAL);
@@ -151,10 +158,27 @@ public class DeviceScanActivity extends SimpleActivity {
                 public void run() {
                     mScanning = false;
                     mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                    mDeviceAdapter.notifyDataSetChanged();
                     invalidateOptionsMenu();
+
+                    /*for (int i = 0; i < mScanDevices_before.size();) { // 防抖
+                        if (mScanDevices_before.get(i).CheckSearchcount() > 2) {
+                            mScanDevices_before.remove(i);
+                        } else {
+                            i++;
+                        }
+                    }*/
+
+                    /*mScanDevices_last.clear(); // 显示出来
+                    for (MTBeacon device : mScanDevices_before) {
+                        mScanDevices_last.add(device);
+                    }
+                    mDeviceAdapter.notifyDataSetChanged();*/
+
                 }
             }, SCAN_PERIOD);
             mScanning = true;//标记正在扫描设备
+            mScanDevices_before.clear();
             mBluetoothAdapter.startLeScan(mLeScanCallback);
         } else {
             mScanning = false;
@@ -167,15 +191,26 @@ public class DeviceScanActivity extends SimpleActivity {
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
             new BluetoothAdapter.LeScanCallback() {
                 @Override
-                public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+                public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
                     //回到主线程进行UI更新
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (!mDevices.contains(device)) {
-                                mDevices.add(device);
-                                mDeviceAdapter.notifyDataSetChanged();
+                            // 检查是否是搜索过的设备，并且更新
+                            for (int i = 0; i < mScanDevices_before.size(); i++) {
+                                //compareTo()方法的返回结果为0时:代表相等
+                                if (0 == device.getAddress().compareTo(
+                                        mScanDevices_before.get(i).GetDevice().getAddress())) {
+                                    mScanDevices_before.get(i).ReflashInf(device, rssi, scanRecord); // 更新信息
+                                    //mDeviceAdapter.notifyDataSetChanged();
+                                    return;//当前设备已经搜索过了,更新一下信息就行,下面的操作不再执行
+                                }
                             }
+                            MTBeacon mtBeacon=new MTBeacon(device, rssi, scanRecord);
+                            mtBeacon.CalculateDistance(19);//开始计算距离
+                            // 增加新设备
+                            mScanDevices_before.add(mtBeacon);
+                            mDeviceAdapter.notifyDataSetChanged();
                         }
                     });
                 }
