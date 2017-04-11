@@ -28,9 +28,9 @@ public class Constants {
 
 
     //=================OTHER STRING====================
-
-   
-
-
+    //目标蓝牙service的uuid号
+    public static final String TARGET_SERVICE_UUID="0000fff0-0000-1000-8000-00805f9b34fb";
+    //目标特征值的uuid号
+    public static final String TARGET_CHARACTERISTIC_UUID="0000fff6-0000-1000-8000-00805f9b34fb";
 
 }

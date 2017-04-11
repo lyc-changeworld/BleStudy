@@ -3,12 +3,14 @@ package com.example.achuan.blestudy.ui.main.activity;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.widget.LinearLayoutManager;
@@ -16,11 +18,14 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 import com.example.achuan.blestudy.R;
+import com.example.achuan.blestudy.Tools;
 import com.example.achuan.blestudy.base.SimpleActivity;
 import com.example.achuan.blestudy.mode.bean.MTBeacon;
+import com.example.achuan.blestudy.service.BleService;
 import com.example.achuan.blestudy.ui.main.adapter.DeviceAdapter;
 import com.example.achuan.blestudy.widget.RyItemDivider;
 
@@ -32,30 +37,29 @@ import butterknife.ButterKnife;
 
 public class DeviceScanActivity extends SimpleActivity {
 
+    private final static String TAG="DeviceScanActivity";
+
     private final static int REQUEST_ENABLE_BT = 2001;//打开蓝牙的请求码
+
     public static final int PERMISSIONS_REQUEST_FINE_LOCATION = 1;//申请权限的请求码
     @BindView(R.id.rv)
     RecyclerView mRv;
     @BindView(R.id.toolbar)
     Toolbar mToolbar;
 
-    private BluetoothAdapter mBluetoothAdapter;
     private boolean mScanning;
     private Handler mHandler;
 
     // Stops scanning after 5 seconds.
     private static final long SCAN_PERIOD = 5000;
 
-
     Context mContext;
-    List<BluetoothDevice> mDevices;//用来存储扫描到的设备集合
     DeviceAdapter mDeviceAdapter;
     LinearLayoutManager mLinearlayoutManager;//列表布局管理者
 
     //预处理和最后使用的设备数据集合
     private List<MTBeacon> mScanDevices_before;
-    private List<MTBeacon> mScanDevices_last;
-
+    //private List<MTBeacon> mScanDevices_last;
 
     @Override
     protected int getLayout() {
@@ -66,37 +70,25 @@ public class DeviceScanActivity extends SimpleActivity {
     protected void initEventAndData() {
         mContext = this;
         setToolBar(mToolbar,getString(R.string.app_name),false);
-
         /*运行时申请权限*/
         requestPermission();
+        //初始化
+        initViewAndData();
 
+        Intent intent=new Intent(this, BleService.class);
+        //startService(intent);
+        //将活动和服务绑定在一起
+        bindService(intent,//创建一个意图,指向服务
+                mConnection,//绑定的实例化对象
+                Context.BIND_AUTO_CREATE);//活动和服务绑定后自动创建服务
+    }
 
-        // Use this check to determine whether BLE is supported on the device.  Then you can
-        // selectively disable BLE-related features.
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
-        // Initializes a Bluetooth adapter.  For API level 18 and above, get a reference to
-        // BluetoothAdapter through BluetoothManager.
-        final BluetoothManager bluetoothManager =
-                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        mBluetoothAdapter = bluetoothManager.getAdapter();
-
-        // Checks if Bluetooth is supported on the device.
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(this, R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        /**如果蓝牙可以用,进行初始化操作*/
+    /*初始化view和数据*/
+    private void initViewAndData(){
         mHandler = new Handler();
         mScanDevices_before=new ArrayList<>();
-        mScanDevices_last=new ArrayList<>();
+        //mScanDevices_last=new ArrayList<>();
         //创建集合实例对象
-        mDevices = new ArrayList<>();
         mDeviceAdapter = new DeviceAdapter(mContext, mScanDevices_before);
         mLinearlayoutManager = new LinearLayoutManager(mContext);
         //设置方向(默认是垂直,下面的是水平设置)
@@ -106,21 +98,55 @@ public class DeviceScanActivity extends SimpleActivity {
         //添加自定义的分割线
         mRv.addItemDecoration(new RyItemDivider(this, R.drawable.di_item));
 
+        mDeviceAdapter.setOnClickListener(new DeviceAdapter.OnClickListener() {
+            @Override
+            public void onClick(View view, int postion) {
+
+                Intent intent = new Intent(getApplicationContext(),
+                        ServiceActivity.class);
+                intent.putExtra("device", mScanDevices_before.get(postion).GetDevice());
+                startActivity(intent);
+
+            }
+        });
     }
+
+
+    /*活动和服务绑定的实例化方法*/
+    private ServiceConnection mConnection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            BleService.LocalBinder binder= (BleService.LocalBinder) service;
+            Tools.mBleService=binder.getService();//获取到对应的的服务对象
+
+            //对硬件设备进行初始化判断
+            if(Tools.mBleService.initBle()){
+                if (!Tools.mBleService.mBluetoothAdapter.isEnabled()) {
+                    final Intent enableBtIntent = new Intent(
+                            BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                } else {
+                    //蓝牙已经打开
+                    scanLeDevice(true); // 开始扫描设备
+                }
+            }else {
+                //不支持蓝牙,直接退出
+                finish();
+            }
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+
+
 
     /**恢复交互时,重新进行设备扫描操作*/
     @Override
     protected void onResume() {
         super.onResume();
-        // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
-        // fire an intent to display a dialog asking the user to grant permission to enable it.
-        if (!mBluetoothAdapter.isEnabled()) {
-            if (!mBluetoothAdapter.isEnabled()) {
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            }
-        } else {
-            //否则,直接查询设备
+        if(mScanning==false&&Tools.mBleService!=null){
             scanLeDevice(true);
         }
     }
@@ -129,8 +155,16 @@ public class DeviceScanActivity extends SimpleActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        scanLeDevice(false);
-        mDevices.clear();
+        if(Tools.mBleService!=null){
+            scanLeDevice(false);
+        }
+    }
+
+    /*活动销毁时记得解绑服务连接*/
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(mConnection);
     }
 
     /**
@@ -149,7 +183,7 @@ public class DeviceScanActivity extends SimpleActivity {
         }
     }
 
-    /*查询设备的方法*/
+    /*扫描设备的方法*/
     private void scanLeDevice(final boolean enable) {
         if (enable) {
             // Stops scanning after a pre-defined scan period.
@@ -157,10 +191,10 @@ public class DeviceScanActivity extends SimpleActivity {
                 @Override
                 public void run() {
                     mScanning = false;
-                    mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                    Tools.mBleService.stopscanBle(mLeScanCallback);
+                    //最后更新距离
                     mDeviceAdapter.notifyDataSetChanged();
                     invalidateOptionsMenu();
-
                     /*for (int i = 0; i < mScanDevices_before.size();) { // 防抖
                         if (mScanDevices_before.get(i).CheckSearchcount() > 2) {
                             mScanDevices_before.remove(i);
@@ -168,26 +202,30 @@ public class DeviceScanActivity extends SimpleActivity {
                             i++;
                         }
                     }*/
-
                     /*mScanDevices_last.clear(); // 显示出来
                     for (MTBeacon device : mScanDevices_before) {
                         mScanDevices_last.add(device);
                     }
                     mDeviceAdapter.notifyDataSetChanged();*/
-
                 }
             }, SCAN_PERIOD);
             mScanning = true;//标记正在扫描设备
+            //启动扫描后,清空数据
             mScanDevices_before.clear();
-            mBluetoothAdapter.startLeScan(mLeScanCallback);
+            Tools.mBleService.scanBle(mLeScanCallback);
         } else {
             mScanning = false;
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            Tools.mBleService.stopscanBle(mLeScanCallback);
         }
         invalidateOptionsMenu();
     }
 
     /*蓝牙设备扫描时的回调方法,在此处进行列表刷新显示*/
+    /**
+     * @param device 被手机蓝牙扫描到的BLE外设实体对象
+     * @param rssi 大概就是表示BLE外设的信号强度，如果为0，则表示BLE外设不可连接。
+     * @param scanRecord 被扫描到的BLE外围设备提供的扫描记录，一般没什么用
+     */
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
             new BluetoothAdapter.LeScanCallback() {
                 @Override
@@ -207,7 +245,7 @@ public class DeviceScanActivity extends SimpleActivity {
                                 }
                             }
                             MTBeacon mtBeacon=new MTBeacon(device, rssi, scanRecord);
-                            mtBeacon.CalculateDistance(19);//开始计算距离
+                            mtBeacon.CalculateDistance(19);//开始计算距离(19代表信号存储的次数)
                             // 增加新设备
                             mScanDevices_before.add(mtBeacon);
                             mDeviceAdapter.notifyDataSetChanged();
@@ -256,15 +294,16 @@ public class DeviceScanActivity extends SimpleActivity {
                 inflate(R.menu.menu_toolbar_main,//指定通过哪一个资源文件来创建菜单
                 menu);
         if (!mScanning) {
+            //扫描停止
             menu.findItem(R.id.menu_stop).setVisible(false);
-            menu.findItem(R.id.menu_scan).setVisible(true);
-            menu.findItem(R.id.menu_refresh).setActionView(null).
-                    setVisible(false);
+            menu.findItem(R.id.menu_scan).setVisible(true);//显示扫描菜单
+            menu.findItem(R.id.menu_refresh).setActionView(null).setVisible(false);//进度条不显示
         } else {
-            menu.findItem(R.id.menu_stop).setVisible(true);
+            //正在扫描
+            menu.findItem(R.id.menu_stop).setVisible(true);//显示停止菜单
             menu.findItem(R.id.menu_scan).setVisible(false);
             menu.findItem(R.id.menu_refresh).setActionView(
-                    R.layout.toolbar_progress);
+                    R.layout.toolbar_progress);//加载显示进度条
         }
         return true;//返回true,表示允许创建的菜单显示出来
     }
@@ -274,7 +313,6 @@ public class DeviceScanActivity extends SimpleActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_scan:
-                mDevices.clear();
                 scanLeDevice(true);
                 break;
             case R.id.menu_stop:

@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Needed only if your app targets Android 5.0 (API level 21) or higher. -->
-    <uses-feature android:name="android.hardware.location.gps" />
+    <!--<uses-feature android:name="android.hardware.location.gps" />-->
 
     <!--低功耗蓝牙要声明特征，或者代码判断-->
     //如果为true表示只能在支持低功耗蓝牙的设备上使用，如果不支持的设备也可以使用，采用代码判断
@@ -26,6 +26,11 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+
+        <!--注册activity-->
+        <activity android:name=".ui.main.activity.ServiceActivity"></activity>
+
         <activity android:name=".ui.main.activity.DeviceScanActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -33,6 +38,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!--注册服务service-->
+        <service android:name=".service.BleService"></service>
+
     </application>
+
+
 
 </manifest>
