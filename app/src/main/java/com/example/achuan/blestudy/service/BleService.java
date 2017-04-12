@@ -23,7 +23,10 @@ import com.example.achuan.blestudy.app.Constants;
 
 /**
  * Created by achuan on 17-4-10.
- *
+ * 功能：低功耗蓝牙设备的功能服务相关
+ * 参考链接：http://blog.csdn.net/Xiong_IT/article/details/60966458
+ * 　　　　　http://lowett.com/2017/03/23/android-bluetooth/
+ * 　　　　　https://github.com/lidong1665/Android-ble
  */
 
 public class BleService extends Service {
@@ -60,11 +63,16 @@ public class BleService extends Service {
         return mBinder;
     }
 
-
-
     @Override
     public void onDestroy() {
         super.onDestroy();
+        disConectBle();
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        disConectBle();
+        return super.onUnbind(intent);
     }
 
     /*****************************Ble蓝牙的一些基本方法****************************/
@@ -80,8 +88,7 @@ public class BleService extends Service {
             return false;
         }
 
-        mBluetoothManager = (BluetoothManager) getSystemService(
-                Context.BLUETOOTH_SERVICE);
+        mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
 
         if (null == mBluetoothManager) {
             return false;

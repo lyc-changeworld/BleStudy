@@ -29,8 +29,13 @@
 
 
         <!--注册activity-->
-        <activity android:name=".ui.main.activity.ServiceActivity"></activity>
+        <!--连接设备界面-->
+        <activity android:name=".ui.main.activity.ServiceActivity"
+                  android:launchMode="singleTask"
+                  android:screenOrientation="portrait"
+                  android:windowSoftInputMode="adjustResize|stateHidden|stateUnchanged"></activity>
 
+        <!--设备扫描界面-->
         <activity android:name=".ui.main.activity.DeviceScanActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

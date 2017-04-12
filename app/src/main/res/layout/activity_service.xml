@@ -1,14 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent">
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="@color/toolbar">
 
-    <ExpandableListView
+    <!--<ExpandableListView
         android:id="@+id/expand_lv"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+    </ExpandableListView>-->
 
-    </ExpandableListView>
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="?attr/actionBarSize"
+        android:background="@color/toolbar"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        android:layout_alignParentTop="true">
+        <!--这里使用自定义的溢出[弹出]菜单样式-->
+    </android.support.v7.widget.Toolbar>
 
-</LinearLayout>
+    <LinearLayout
+        android:id="@+id/ll_send_msg"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:layout_alignParentBottom="true"
+        android:background="@color/white">
+        <EditText
+            android:id="@+id/et_msg"
+            android:layout_weight="4"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"/>
+        <Button
+            android:id="@+id/bt_send"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:text="发送"/>
+    </LinearLayout>
+
+    <!--消息显示区域-->
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/ll_send_msg"
+        android:layout_below="@id/toolbar"
+        android:background="@color/white">
+    </android.support.v7.widget.RecyclerView>
+
+
+</RelativeLayout>
